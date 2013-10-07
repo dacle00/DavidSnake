@@ -3,6 +3,7 @@ public class Map {
 
 	int width;
 	int height;
+	int grid;
 	tile[][] map;
 	int p1x, p1y;
 	int p2x, p2y;
@@ -11,29 +12,46 @@ public class Map {
 	
 	enum tile {blank, wall, snakebody, snakehead, p1Start, p2Start};
 	
+	
+	public Map()
+	{
+		//set everything to 1
+		width = 1;
+		height = 1;
+		grid = 1;
+		p1x = 1;
+		p1y = 1;
+		p2x = 1;
+		p2y = 1;
+		p1StartLocation = true;
+		p2StartLocation = false;
+	}
+	
+	
 	//default empty map with square edges;
 	/*    XXXXXXXX
 	 *    X      X
 	 *    X      X
 	 *    X      X
 	 *    XXXXXXXX   */
-	public Map()
+	public Map(int wdth, int hght, int gridSize)
 	{
-		width = 80;
-		height = 80;
+		width = wdth/gridSize;
+		height = hght/gridSize;
+		grid = gridSize;
 		map = new tile[width][height];
 		//draw horizontal edges
-		for(int x=0; x<width; x++)
+		for(int x=0; x<width-1; x++)
 		{
 			map[x][0] = tile.wall;
-			map[x][height] = tile.wall;
+			map[x][height-1] = tile.wall;
 		}
 
 		//draw vertical edges
-		for(int x=0; x<width; x++)
+		for(int x=0; x<height-1; x++)
 		{
 			map[0][x] = tile.wall;
-			map[width][x] = tile.wall;
+			map[width-1][x] = tile.wall;
 		}
 	}
 	

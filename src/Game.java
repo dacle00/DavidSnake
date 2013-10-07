@@ -7,7 +7,6 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.event.KeyListener;
 import javax.sound.sampled.*;
-import Snake.direction;
 
 
 public class Game extends Applet implements Runnable, KeyListener
@@ -18,10 +17,11 @@ public class Game extends Applet implements Runnable, KeyListener
 	//double buffering to avoid flickering images
 	Image 		dbImage;
 	Graphics 	dbGraphics;
+	Color		backgroundColor = Color.green;
+	Color		wallColor = Color.darkGray;
 
-	int	WDTH			= 800;
-	int	HGHT			= 800;
-
+	int	WDTH	= 800;
+	int	HGHT	= 800;
 
 	Thread 		th = new Thread(this);
 	boolean 	gameRunning = false;
@@ -30,6 +30,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	int			numPlayers;
 
 	Map[]		maps;
+	int			MapGridSize = 10;
 	Snake		s1;
 	Snake		s2;
 	
@@ -39,7 +40,6 @@ public class Game extends Applet implements Runnable, KeyListener
 	final int   PADDINGRIGHT = 0;
 	final int	POINTSTOADVANCE = 10;
 	final int	MaxSnakePause = 120;
-	
 	
 	//PLAYER CONTROLS
 	final int	P1Lt = 65;		// [A]
@@ -66,22 +66,26 @@ public class Game extends Applet implements Runnable, KeyListener
 			this.setSize(new Dimension(WDTH, HGHT));
 		}
 
-		gameRunning = true;
-		gamePaused = true;
-		showDebug = false;
-		numPlayers = 1;
+		gameRunning	= true;
+		gamePaused	= true;
+		showDebug	= false;
+		numPlayers	= 1;
  
 		//define ALL MAPS
-		maps = new Map[1];
-		maps[0] = new Map();
-		maps[0].p1x = WDTH/2;
-		maps[0].p1y = HGHT;
-		
+		int numMaps = 1;
+		maps = new Map[numMaps];
+		Map m = new Map(WDTH, HGHT, MapGridSize);
+		//m.addWall_box(m.width/4, m.height/4, (m.width/4)*3, (m.height/4)*3);
+		m.p1x = WDTH/8;
+		m.p1y = HGHT/2;
+		maps[0] = m;
+		// TODO: more maps.
 		
 		//put Snake(s) on map
-		s1 = new Snake("Snake1", 5, 10, new Dimension(maps[0].p1x, maps[0].p1y), direction.left);
+		s1 = new Snake("Snake1", Color.red, 5, maps[0].grid, maps[0].p1x, maps[0].p1y, Snake.direction.up, 1f, maps[0].grid);
+		s2 = new Snake("Snake2", Color.blue, 5, maps[0].grid, maps[0].p2x, maps[0].p2y, Snake.direction.up, 1f, maps[0].grid);
 		if( numPlayers==2 && maps[0].p2StartLocation ) 
-			s2 = new Snake("Snake1", 5, 10, new Dimension(maps[0].p2x, maps[0].p2y), direction.left);
+			s2 = new Snake("Snake1", Color.blue, 5, 10, maps[0].p2x, maps[0].p2y, Snake.direction.left, 1f, maps[0].grid);
 	}
 
 	 
@@ -105,50 +109,28 @@ public class Game extends Applet implements Runnable, KeyListener
 	
 	public void run()
 	{
-		int x_prev;
-		int y_prev;
-		int xspeed;
-		float yspeed;
 		
 		while (gameRunning)
 		{
 			if (!gamePaused)
 			{
-				//temp ball info
-				x_prev = b.getX();
-				y_prev = b.getY();
-				xspeed = b.getxSpeed();
-				yspeed = b.getySpeed();
-	
 				//============================
-				//Move the Ball's Position
+				//Move the Snake's Position
 				//============================
-				if( !ballIsPaused )
+				if( !s1.isPaused )
 				{
-					b.setX(x_prev += xspeed);
-					b.setY(y_prev += yspeed);
+					//check if turn, then move forward.
+					checkSnakeTurning(s1);
+					moveForward(s1);
 				}
 				else
 				{
-					if( ballPauseCountdown--<=0 )
+					if( s1.pauseTime--<=0 )
 					{
-						ballPauseCountdown = MAXBALLPAUSE;
-						ballIsPaused = false;
+						s1.pauseTime = s1.maxPause;
+						s1.isPaused = false;
 					}
 				}
-	
-				//============================
-				//Move the Players' Positions
-				//============================
-				p1 = CheckKeyboardInput(p1);
-				p2 = CheckKeyboardInput(p2);
-				
-				//============================
-				//check Collisions
-				//============================
-				CheckBorderCollisions();
-				CheckPaddleCollisions(p1);
-				CheckPaddleCollisions(p2);
 				
 				//============================
 				//PRINT DEBUG INFO
@@ -195,7 +177,7 @@ public class Game extends Applet implements Runnable, KeyListener
 			dbGraphics = dbImage.getGraphics();
 		}		
 
-		dbGraphics.setColor(Color.black);
+		dbGraphics.setColor(backgroundColor);
 		dbGraphics.fillRect(0, 0,  WDTH, HGHT);
 		dbGraphics.setColor(this.getForeground());
 		paint(dbGraphics);
@@ -207,34 +189,35 @@ public class Game extends Applet implements Runnable, KeyListener
 	//Draw each object to the screen once. The repaint() method will call this method
 	public void paint(Graphics g)
 	{
-		g.setColor(Color.black);
-		g.fillRect(0, 0,  WDTH, HGHT);
-
-		//DRAW SCORE
-		g.setColor(Color.cyan);
-		g.setFont(new Font("monospaced", Font.BOLD, 56));
-		g.drawString(Integer.toString(p1.getScore()), (WDTH/2)-120, 46);
-		g.drawString(Integer.toString(p2.getScore()), (WDTH/2)+80, 46);		
+		//g.setColor(Color.black);
+		//g.fillRect(0, 0,  WDTH, HGHT);
 		
-		//draw ball
-		g.setColor(b.getColor());
-		g.fillOval(b.getX()-b.getRadius(),  b.getY()-b.getRadius(),  b.getRadius()*2,  b.getRadius()*2);
+		//draw the current map
+		g.setColor(wallColor);
+		int grid = maps[0].grid;
+		int w = maps[0].width;
+		int h = maps[0].height;
+		for( int x=0; x<w; x++)
+		{
+			g.drawLine(0, x*grid, WDTH, x*grid);
+			g.drawLine(x*grid, 0, x*grid, HGHT);
+			for( int y=0; y<h; y++)
+				if( maps[0].map[x][y]==Map.tile.wall )
+				{
+					g.fillRect((x*grid)-(grid/2), (y*grid)-(grid/2), grid, grid);
+				}	
+		}
 		
-		//draw paddle1
-		g.setColor(p1.getColor());
-		g.fillRect(p1.getX()-(p1.getWidth()/2), p1.getY()-(p1.getHeight()/2), p1.getWidth(), p1.getHeight());
+		//draw Snake1
+		g.setColor(s1.color);
+		g.fillRect(s1.headX-(s1.width/2), s1.headY-(s1.width/2), s1.width, s1.width);
 		
-		//draw paddle2
-		g.setColor(p2.getColor());
-		g.fillRect(p2.getX()-(p2.getWidth()/2), p2.getY()-(p2.getHeight()/2), p2.getWidth(), p2.getHeight());
-		
-		//draw center dashed line
-		paint_centerDashedLine(g);
-		
-		//draw temp dot to show the actual SINGLE POINT of paddles
+		//draw temporary dot to show the actual SINGLE POINT of paddles
 		g.setColor(Color.white);  
-		g.fillOval(p1.getX(),  p1.getY(), 3, 3);
-		g.fillOval(p2.getX(),  p2.getY(), 3, 3);
+		g.fillOval(s1.headX,  s1.headY, 3, 3);
+		
+		//draw temporary grid, showing where snake can turn.
+		g.setColor(wallColor);
 		
 		//DRAW PAUSE MENU
 		if( gamePaused )
@@ -256,181 +239,17 @@ public class Game extends Applet implements Runnable, KeyListener
 
 		//DRAW WINNING MENU
 		//winning conditions
-		if( p1.getScore()>=POINTSTOWIN || p2.getScore()>=POINTSTOWIN )
+		if( s1.score + s2.score >= POINTSTOADVANCE  )
 		{
-			ballIsPaused = true;
-			ballPauseCountdown = MAXBALLPAUSE;
+			s1.isPaused = true;
+			s2.isPaused = true;
+			s1.pauseTime = s1.maxPause;
+			s2.pauseTime = s2.maxPause;
 			// draw end-game menu offer keys to quit and to play again.
 		}
-		
 	}
 
-
-	public void paint_centerDashedLine(Graphics g)
-	{
-		g.setColor(b.getColor());
-		int winHeight	= HGHT;
-		int centerX		= WDTH/2;
-		int dashY		= 0; 
-		int dashWidth	= p1.getWidth() /2;
-		int numDashes	= 10;
-		int dashPad		= 20;
-		int dashHeight	= (winHeight/numDashes)-dashPad;
-		for( int i=0; i<numDashes; i++)
-		{   
-			dashY		= (i * (winHeight/numDashes)) + dashPad/2;
-			dashHeight	= (winHeight/numDashes) - dashPad;
-			g.fillRect(centerX-(dashWidth/2), dashY, dashWidth, dashHeight);
-		}
-	}
-	
-	
-	public void CheckBorderCollisions()
-	{
-		int x = b.getX();
-		int y = b.getY();
-		float yspeed = b.getySpeed();
 		
-		//Ball on Left Edge (P2 scores against P1!)
-		if( x < 0 )
-		{
-			//catch the ball left edge, increment score
-			Score("Player2");
-			if(showDebug) System.out.println("P2 SCORE!!!!  Ball Hit Left at X:" + x + " + Y:" + y);
-		}
-		
-		//Ball on Right Edge (P1 scores against P2!)
-		if( x > getSize().width )
-		{
-			//catch the ball, right edge.
-			Score("Player1");
-			if(showDebug) System.out.println("P1 SCORE!!!!  Ball Hit Left at X:" + x + " + Y:" + y);
-		}
-
-		//bounce ball off of top edge.
-		if( y < 0 + PADDINGTOP )  
-		{
-			playSound(BallHitEdge);
-			b.setySpeed(Math.abs(yspeed));
-			if(showDebug) System.out.println("Ball Hit Top at X:" + x + " + Y:" + y);
-		}
-		
-		//bounce ball off of bottom edge.
-		if( y > getSize().height - PADDINGBOTTOM ) 
-		{
-			playSound(BallHitEdge);
-			b.setySpeed(-Math.abs(yspeed));
-			if(showDebug) System.out.println("Ball Hit Bottom at X:" + x + " + Y:" + y);
-		} 
-	}
-		
-	
-	public void CheckPaddleCollisions(Paddle p)
-	{
-		int x = b.getX();
-		int y = b.getY();
-		int xspeed = b.getxSpeed();
-		int yDif = b.getY() - p.getY();
-		int modifier = 1;
-
-
-		//check for Paddle Collisions if ballX value is within range of Paddle1X value
-		if( x>(p.getX()-(p.getWidth())) && x<(p.getX()+(p.getWidth())) )
-		{
-			if(showDebug) System.out.println("Collision Check Left  X:" + x + " + Y:" + y);
-			if( CollisionCheck_PaddleX(p) )
-			{
-				
-				playSound(BallHitPaddle);
-				
-				//modify horizontal speed based on if Paddle was moving AWAY or TOWARDS ball.
-				if( p.getX()==p1.getX() )
-					switch (p.getXMoving())
-					{
-						case -1:
-							modifier = -1;
-							break;
-						case 1:
-							modifier = 2;
-							break;
-						case 0:
-						default:
-							modifier = 1;
-							break;
-					}
-				if( p.getX()==p2.getX() )
-					switch (p.getXMoving())
-					{
-						case -1:
-							modifier = 2;
-							break;
-						case 1:
-							modifier = -1;
-							break;
-						case 0:
-						default:
-							modifier = 1;
-							break;
-					}
-				
-				if(showDebug) System.out.println("BALL COLLIDED WITH PADDLE1 X:" + x + " + Y:" + x);
-				//bounce the ball
-				if(x<WDTH/2)
-					b.setxSpeed(Math.abs(xspeed)+modifier);
-				else
-					b.setxSpeed(-(Math.abs(xspeed)+modifier));
-				
-				//set vertical speed, based on where ball collided paddle
-				b.setySpeed((float)(.125 * yDif));
-			}
-		}
-	}
-	
-	
-	public boolean CollisionCheck_PaddleX(Paddle p)
-	{
-		int x = b.getX();
-		int y = b.getY();
-		int radius = b.getRadius();
-		
-		//ball is on the left side of screen, at an X-coord that could intersect the P1Paddle
-		Rectangle2D.Double Paddle1Bounds = new Rectangle2D.Double(p.getX()-(p.getWidth()/2),p.getY()-(p.getHeight()/2), p.getWidth(),p.getHeight()); //locationXY, sizeXY
-		Ellipse2D.Double BallBounds = new Ellipse2D.Double(x,y, radius*2,radius*2);
-
-		//check if Ball is intersecting P1Paddle.
-		return(BallBounds.intersects(Paddle1Bounds));
-	}
-		
-	
-	public void Score(String player)
-	{
-		playSound(BallScore);
-
-		ballIsPaused = true;
-		
-		if( player == "Player1" )
-		{
-			p1.score();
-			if(showDebug) System.out.println("P1 SCORE = "+p1.getScore());
-		}	
-		if( player == "Player2" )
-		{
-			p2.score++;
-			if(showDebug) System.out.println("P2 SCORE = "+p2.getScore());
-		}
-		
-		if( p1.getScore()<POINTSTOWIN && p2.getScore()<POINTSTOWIN)
-			resetAfterScore();
-		else
-		{
-			if( p1.getScore()>=POINTSTOWIN )
-				winGame(p1);
-			else
-				winGame(p2);
-		}
-	}
-	
-	
 	public void playSound(String sound)
 	{
 		try {
@@ -459,145 +278,53 @@ public class Game extends Applet implements Runnable, KeyListener
 		}
 	}
 	
-	
-	public void resetAfterScore()
-	{
-		//reset ball position and speed
-		b.setX(WDTH/2);
-		b.setY(HGHT/2);
-		b.setxSpeed(INITIALBALLXSPEED);
-		b.setySpeed(INITIALBALLYSPEED);
-		int xspeed = b.getxSpeed();
-		if(showDebug) System.out.println("Ball X:" + b.getX() + " Y:" + b.getY());
-		
-		//reset paddle locations?  pros? cons?
-		
-		//choose ball direction
-		int i = new Random().nextInt(99);
-		//decide direction based i value
-		if (i>49)
-			b.setxSpeed(Math.abs(xspeed));
-		else
-			b.setxSpeed(-Math.abs(xspeed));
-	}
-
-	
-	public void winGame(Paddle p)
-	{
-		
-		if( p.getX()==p1.getX() )
-		{
-			//p1 won
-			if(showDebug) System.out.println("!!!! P1 WON !!!!");
-		}
-		else if ( p.getX()==p2.getX() )
-		{
-			//p2 won
-			if(showDebug) System.out.println("!!!! P1 WON !!!!");
-		}
-		else
-		{
-			//nobody won. just reset the game
-			if(showDebug) System.out.println("Game is resetting.");
-		}
-		//call init
-		init();
-		//unpause game.
-		gamePaused = false;
-		
-		//reset some other global variables??
-		
-		//pause ball for MAXBALLPAUSE
-		ballIsPaused = true;
-		ballPauseCountdown = MAXBALLPAUSE;
-	}
-	
-	
-	public Paddle CheckKeyboardInput(Paddle p)
-	{
-		//the variables dictating if the paddles are moving up, down, or are still
-		//are set in the keyPressed() and keyReleased() methods.
-		int pyspeed = p.getYSpeed();
-		int pxspeed = p.getXSpeed();
-		int py = p.getY();
-		int px = p.getX();
-		
-		//CHECK VERTICAL MOVEMENT
-		if( p.getYMoving()>0 && p.getY()>0+p.getHeight()/2 )
-		{
-			//moving UP
-			p.setY( py-pyspeed );
-		}
-		else if ( p.getYMoving()<0 && p.getY()<HGHT-p.getHeight()/2 )
-		{
-			//moving DOWN
-			p.setY( py+pyspeed );
-		}
-		else 
-		{
-			//not y moving, no change
-		}
-		
-		//CHECK HORIZONTAL MOVEMENT
-		if( p.getXMoving()<0 && 
-			p.getX()>=(p.getInitialX()-(PADDLEALLOWEDHORIZONTALMOVEMENT/2)) )
-		{
-			//moving LEFT
-			p.setX( px-pxspeed );
-		}
-		else if ( p.getXMoving()>0 && 
-				  p.getX()<=(p.getInitialX()+(PADDLEALLOWEDHORIZONTALMOVEMENT/2)) )
-		{
-			//moving RIGHT
-			p.setX( px+pxspeed );
-		}
-		else 
-		{
-			//not x moving, no change
-		}
-		
-		return p;
-	}
-
 
 	public void keyTyped(KeyEvent ke) 	{	}
 
 
 	public void keyPressed(KeyEvent ke)
 	{		
+		
 		//System.out.println("User Pressed Key: " + KeyEvent.getKeyText(ke.getKeyCode()) + " KeyChar: "+ke.getKeyChar()+" KeyCode: "+ke.getKeyCode());
 
-		//P1 Move UP
-		if (ke.getKeyCode() == p1.getUpKey())
-			p1.setYMoving(1);
+		//P1 Check for vertical movement change.
+		Snake.direction d = s1.facing;
+		if( d==Snake.direction.left || d==Snake.direction.right )
+		{
+			if (ke.getKeyCode() == P1Up)
+				s1.turning=Snake.direction.up;
+			if (ke.getKeyCode() == P1Dn)
+				s1.turning=Snake.direction.down;			
+		}
 
-		//P1 Move DOWN
-		if (ke.getKeyCode() == p1.getDownKey())
-			p1.setYMoving(-1);
+		//P1 Check for horizontal movement change.
+		if( d==Snake.direction.up || d==Snake.direction.down)
+		{
+			if (ke.getKeyCode() == P1Lt)
+				s1.turning=Snake.direction.left;
+			if (ke.getKeyCode() == P1Rt)
+				s1.turning=Snake.direction.right;			
+		}
 
-		//P1 Move LEFT
-		if (ke.getKeyCode() == p1.getLeftKey())
-			p1.setXMoving(-1);
+		
+		//P2 Check for vertical movement change.
+		d = s2.facing;
+		if( d==Snake.direction.left || d==Snake.direction.right )
+		{
+			if (ke.getKeyCode() == P2Up)
+				s2.turning=Snake.direction.up;
+			if (ke.getKeyCode() == P2Dn)
+				s2.turning=Snake.direction.down;			
+		}
 
-		//P1 Move RIGHT
-		if (ke.getKeyCode() == p1.getRightKey())
-			p1.setXMoving(1);
-
-		//P2 Move UP
-		if (ke.getKeyCode() == p2.getUpKey())
-			p2.setYMoving(1);
-
-		//P2 Move DOWN
-		if (ke.getKeyCode() == p2.getDownKey())
-			p2.setYMoving(-1);
-
-		//P2 Move LEFT
-		if (ke.getKeyCode() == p2.getLeftKey())
-			p2.setXMoving(-1);
-
-		//P2 Move RIGHT
-		if (ke.getKeyCode() == p2.getRightKey())
-			p2.setXMoving(1);
+		//P2 Check for horizontal movement change.
+		if( d==Snake.direction.up || d==Snake.direction.down)
+		{
+			if (ke.getKeyCode() == P2Lt)
+				s2.turning=Snake.direction.left;
+			if (ke.getKeyCode() == P2Rt)
+				s2.turning=Snake.direction.right;			
+		}
 		
 		//PAUSE UNPAUSE THE GAME
 		if (ke.getKeyCode() == PAUSE)
@@ -609,36 +336,87 @@ public class Game extends Applet implements Runnable, KeyListener
 
 		//RESET THE GAME
 		if (gamePaused && ke.getKeyCode() == RESET)
-			winGame(new Paddle());
+		{
+			//winGame(new Paddle());
+		}
 	}
 	
 	
-	public void keyReleased(KeyEvent ke)
-	{
-		//P1 stop moving up if moving up
-		if (ke.getKeyCode() == p1.getUpKey() && p1.getYMoving()>0) 
-			p1.setYMoving(0);
-		//P1 stop moving down if moving down
-		if (ke.getKeyCode() == p1.getDownKey() && p1.getYMoving()<0) 
-			p1.setYMoving(0);
-		//P1 stop moving left if moving left
-		if (ke.getKeyCode() == p1.getLeftKey() && p1.getXMoving()<0)
-			p1.setXMoving(0);
-		//P1 stop moving right if moving right
-		if (ke.getKeyCode() == p1.getRightKey() && p1.getXMoving()>0)
-			p1.setXMoving(0);
+	public void keyReleased(KeyEvent ke) { }
 
-		//P2 stop moving up if moving up 
-		if (ke.getKeyCode() == p2.getUpKey() && p2.getYMoving()>0) 
-			p2.setYMoving(0);
-		//P2 stop moving down if moving down
-		if (ke.getKeyCode() == p2.getDownKey() && p2.getYMoving()<0) 
-			p2.setYMoving(0);
-		//P2 stop moving left if moving left
-		if (ke.getKeyCode() == p2.getLeftKey() && p2.getXMoving()<0)
-			p2.setXMoving(0);
-		//P2 stop moving right if moving right
-		if (ke.getKeyCode() == p2.getRightKey() && p2.getXMoving()>0)
-			p2.setXMoving(0);
+	
+	public void checkSnakeTurning(Snake s)
+	{
+		int grid= maps[0].grid;
+		//determine if snake is about to reach a grid intersection to turn.
+		// then calculate distance until snake reaches allowable turn
+		if( s.turning==Snake.direction.up || s.turning==Snake.direction.down )
+		{
+			if( s.facing==Snake.direction.right && s.distUntilTurn<s.speed )
+				s.distUntilTurn = (int)(s.speed - s.distUntilTurn);
+			else if( s.facing==Snake.direction.left && s.distUntilTurn<-s.speed )
+				s.distUntilTurn = (int)(-s.speed- s.distUntilTurn);  //TODO:  does this work ?
+		}
+		if( s.turning==Snake.direction.left || s.turning==Snake.direction.right )
+		{
+			if( s.facing==Snake.direction.down && s.distUntilTurn<s.speed )
+				s.distUntilTurn = (int)(s.speed - s.distUntilTurn);
+			else if( s.facing==Snake.direction.up && s.distUntilTurn<-s.speed )
+				s.distUntilTurn = (int)(-s.speed- s.distUntilTurn);  //TODO:  does this work ?
+		}
 	}
+	
+	public void moveForward(Snake s)
+	{
+		//if speed<distUntilTurn.. simply move snake per speed and update distUntilTurn.
+		//otherwise, (speed>distUntilTurn), need to handle the turn first:
+		// move as far as distUntilTurn, turn the snake, move the remaining speed-distUntilTurn.  remember to update distUntilTurn
+		int x = s.headX;
+		int y = s.headY;
+		int d = s.distUntilTurn;
+		int grid = maps[0].grid;
+		float spd = s.speed;
+		
+		if( spd<=d )
+		{
+			forward(s, s.speed); 
+		}
+		else
+		{
+			//move distUntilTurn
+			forward(s, d);
+			
+			//turn
+			if( s.turning!=null && s.turning!=s.facing )
+			{
+				s.facing = s.turning;
+				s.turning = null;
+			}
+
+			//move remaining dist of speed
+			forward(s, s.speed-d);
+		}
+		
+		
+		//recalc distUntilTurn
+		
+		
+	}
+	
+	
+	public void forward(Snake s, float dist)
+	{
+		int x = s.headX;
+		int y = s.headY;
+		if( s.facing==Snake.direction.right )
+			s.headX = (int)(x + s.speed);
+		else if( s.facing==Snake.direction.left )
+			s.headX = (int)(x - s.speed);
+		else if( s.facing==Snake.direction.down )
+			s.headY = (int)(y + s.speed);
+		else if( s.facing==Snake.direction.up )
+			s.headY = (int)(y - s.speed);
+	}
+	
+	
 }
