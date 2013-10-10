@@ -120,8 +120,7 @@ public class Game extends Applet implements Runnable, KeyListener
 				if( !s1.isPaused )
 				{
 					//check if turn, then move forward.
-					checkSnakeTurning(s1);
-					moveForward(s1);
+					moveSnake(s1);
 				}
 				else
 				{
@@ -135,6 +134,9 @@ public class Game extends Applet implements Runnable, KeyListener
 				//============================
 				//PRINT DEBUG INFO
 				//============================
+				if (s1.turning!=null)System.out.println(s1.name + "   X:"+s1.headX+" Y:"+s1.headY+ " dir:"+s1.facing.toString() + " turning:"+s1.turning.toString());
+
+				
 				if(showDebug)
 				{
 					/*
@@ -284,7 +286,6 @@ public class Game extends Applet implements Runnable, KeyListener
 
 	public void keyPressed(KeyEvent ke)
 	{		
-		
 		//System.out.println("User Pressed Key: " + KeyEvent.getKeyText(ke.getKeyCode()) + " KeyChar: "+ke.getKeyChar()+" KeyCode: "+ke.getKeyCode());
 
 		//P1 Check for vertical movement change.
@@ -339,84 +340,114 @@ public class Game extends Applet implements Runnable, KeyListener
 		{
 			//winGame(new Paddle());
 		}
+
 	}
 	
 	
 	public void keyReleased(KeyEvent ke) { }
 
 	
-	public void checkSnakeTurning(Snake s)
+	public void moveSnake(Snake s)
 	{
-		int grid= maps[0].grid;
-		//determine if snake is about to reach a grid intersection to turn.
-		// then calculate distance until snake reaches allowable turn
-		if( s.turning==Snake.direction.up || s.turning==Snake.direction.down )
-		{
-			if( s.facing==Snake.direction.right && s.distUntilTurn<s.speed )
-				s.distUntilTurn = (int)(s.speed - s.distUntilTurn);
-			else if( s.facing==Snake.direction.left && s.distUntilTurn<-s.speed )
-				s.distUntilTurn = (int)(-s.speed- s.distUntilTurn);  //TODO:  does this work ?
-		}
-		if( s.turning==Snake.direction.left || s.turning==Snake.direction.right )
-		{
-			if( s.facing==Snake.direction.down && s.distUntilTurn<s.speed )
-				s.distUntilTurn = (int)(s.speed - s.distUntilTurn);
-			else if( s.facing==Snake.direction.up && s.distUntilTurn<-s.speed )
-				s.distUntilTurn = (int)(-s.speed- s.distUntilTurn);  //TODO:  does this work ?
-		}
-	}
-	
-	public void moveForward(Snake s)
-	{
-		//if speed<distUntilTurn.. simply move snake per speed and update distUntilTurn.
-		//otherwise, (speed>distUntilTurn), need to handle the turn first:
-		// move as far as distUntilTurn, turn the snake, move the remaining speed-distUntilTurn.  remember to update distUntilTurn
-		int x = s.headX;
-		int y = s.headY;
-		int d = s.distUntilTurn;
-		int grid = maps[0].grid;
-		float spd = s.speed;
+		//check if turn is requested.
+		// - if no turn requested, simply move forward the full speed( total move distance).
+		// - if turn requested: compare speed(total move distance)
+		//    - if distUntilTurn == 0:  turn and move full speed.
+		//    - if distUntilTurn>0 AND distUntilTurn>speed:  move full speed
+		//    - if distUntilTurn<speed - move distanceToTurn, turn, move remaining distance.
+		//recalc distUntilTurn
+		int dut = Math.abs(s.distUntilTurn);
+		float spd = Math.abs(s.speed);
+		Snake.direction dir_facing = s.facing;
+		Snake.direction dir_turn = s.turning;
 		
-		if( spd<=d )
+		
+		if( dir_turn!=null && dir_turn!=dir_facing )
 		{
-			forward(s, s.speed); 
+			//turn is requested
+			if( dut==0 )
+			{
+				//turn
+				turnSnake(s);
+				//move full speed
+				forward(s,  spd);
+			}
+			else if(dut>=spd )
+			{
+				//move full speed
+				forward(s,  spd);
+			}
+			else if( dut>spd )
+			{
+				//move dut
+				forward(s,  dut);
+				//turn
+				turnSnake(s);
+				//move remaining distance
+				forward(s,  spd-dut);
+				
+			}
+			else
+			{
+				//THIS SHOULD NEVER HAPPEN
+				System.err.println("ERROR IN MOVEMENT FLOW");
+				System.out.println("ERROR IN MOVEMENT FLOW");
+			}
 		}
 		else
 		{
-			//move distUntilTurn
-			forward(s, d);
-			
-			//turn
-			if( s.turning!=null && s.turning!=s.facing )
-			{
-				s.facing = s.turning;
-				s.turning = null;
-			}
-
-			//move remaining dist of speed
-			forward(s, s.speed-d);
+			//assume no turn is requested. move full distance.
+			forward(s,  spd);
 		}
 		
-		
-		//recalc distUntilTurn
-		
+		//recalculate dut and store to snake.
+		calculateDistanceUntilTurn(s);
 		
 	}
 	
 	
-	public void forward(Snake s, float dist)
+	public void forward(Snake s, float distance)
 	{
+		//logic for moving in a straight line, the distance specified
 		int x = s.headX;
 		int y = s.headY;
-		if( s.facing==Snake.direction.right )
-			s.headX = (int)(x + s.speed);
-		else if( s.facing==Snake.direction.left )
-			s.headX = (int)(x - s.speed);
-		else if( s.facing==Snake.direction.down )
-			s.headY = (int)(y + s.speed);
-		else if( s.facing==Snake.direction.up )
-			s.headY = (int)(y - s.speed);
+		Snake.direction dir = s.facing;
+		
+		if( dir==Snake.direction.left )
+			s.headX = (int)(x-distance);
+		else if( dir==Snake.direction.right )
+			s.headX = (int)(x+distance);
+		else if( dir==Snake.direction.up )
+			s.headY = (int)(y-distance);
+		else if( dir==Snake.direction.down )
+			s.headY = (int)(y+distance);
+		
 	}
 	
 	
+	public void turnSnake(Snake s)
+	{
+		s.facing = s.turning;
+		s.turning = null;
+	}
+	
+	
+	public void calculateDistanceUntilTurn(Snake s)
+	{
+		int grid = maps[0].grid;
+		Snake.direction dir = s.facing;
+		int x = Math.abs(s.headX);
+		int y = Math.abs(s.headY);
+		int dut = -1;
+		
+		if( dir==Snake.direction.right )
+			dut = grid - (x%grid);
+		if( dir==Snake.direction.down )
+			dut = grid - (y%grid);
+		if( dir==Snake.direction.left )
+			dut = x%grid;
+		if( dir==Snake.direction.up )
+			dut = y%grid;
+		s.distUntilTurn = dut;
+	}
 }
