@@ -30,7 +30,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	int			numPlayers;
 
 	Map[]		maps;
-	int			MapGridSize = 10;
+	int			MapGridSize = 50;
 	Snake		s1;
 	Snake		s2;
 	
@@ -76,8 +76,8 @@ public class Game extends Applet implements Runnable, KeyListener
 		maps = new Map[numMaps];
 		Map m = new Map(WDTH, HGHT, MapGridSize);
 		//m.addWall_box(m.width/4, m.height/4, (m.width/4)*3, (m.height/4)*3);
-		m.p1x = WDTH/8;
-		m.p1y = HGHT/2;
+		m.p1x = WDTH-(2*MapGridSize);
+		m.p1y = HGHT-(2*MapGridSize);
 		maps[0] = m;
 		// TODO: more maps.
 		
@@ -134,7 +134,7 @@ public class Game extends Applet implements Runnable, KeyListener
 				//============================
 				//PRINT DEBUG INFO
 				//============================
-				if (s1.turning!=null)System.out.println(s1.name + "   X:"+s1.headX+" Y:"+s1.headY+ " dir:"+s1.facing.toString() + " turning:"+s1.turning.toString());
+				if (s1.turning!=null)System.out.println(s1.name + "   X:"+s1.headX+" Y:"+s1.headY+ " dir:"+s1.facing.toString() + " turning:"+s1.turning.toString() + " in " + s1.distUntilTurn);
 
 				
 				if(showDebug)
@@ -440,14 +440,25 @@ public class Game extends Applet implements Runnable, KeyListener
 		int y = Math.abs(s.headY);
 		int dut = -1;
 		
-		if( dir==Snake.direction.right )
-			dut = grid - (x%grid);
-		if( dir==Snake.direction.down )
-			dut = grid - (y%grid);
-		if( dir==Snake.direction.left )
-			dut = x%grid;
-		if( dir==Snake.direction.up )
-			dut = y%grid;
+		if( dir==Snake.direction.right || dir==Snake.direction.left)
+		{
+			if( x%grid==0 )
+				dut=0;
+			else if( dir==Snake.direction.right )
+				dut = grid - (x%grid);
+			else if( dir==Snake.direction.left )
+				dut = x%grid;
+		}
+		else if( dir==Snake.direction.down || dir==Snake.direction.up )
+		{
+			if( y%grid==0 )
+				dut=0;
+			else if( dir==Snake.direction.down )
+				dut = grid - (y%grid);
+			else if( dir==Snake.direction.up )
+				dut = y%grid;
+		}
+			
 		s.distUntilTurn = dut;
 	}
 }

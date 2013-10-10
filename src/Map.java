@@ -41,14 +41,14 @@ public class Map {
 		grid = gridSize;
 		map = new tile[width][height];
 		//draw horizontal edges
-		for(int x=0; x<width-1; x++)
+		for(int x=0; x<width; x++)
 		{
 			map[x][0] = tile.wall;
 			map[x][height-1] = tile.wall;
 		}
 
 		//draw vertical edges
-		for(int x=0; x<height-1; x++)
+		for(int x=0; x<height; x++)
 		{
 			map[0][x] = tile.wall;
 			map[width-1][x] = tile.wall;
