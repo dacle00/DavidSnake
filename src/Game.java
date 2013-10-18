@@ -1,5 +1,6 @@
 import java.applet.*;
 import java.awt.*;
+import java.awt.Color;
 import java.awt.event.*;
 import java.net.URL;
 import java.awt.event.KeyListener;
@@ -14,8 +15,8 @@ public class Game extends Applet implements Runnable, KeyListener
 	//double buffering to avoid flickering images
 	Image 		dbImage;
 	Graphics 	dbGraphics;
-	Color		backgroundColor = Color.green;
-	Color		wallColor = Color.darkGray;
+	Color		backgroundColor = new Color(220,255,220);	//light gray, with green tint
+	Color		wallColor = new Color(64,128,64);  			// dark gray, with green tint
 
 	int	WDTH	= 800;
 	int	HGHT	= 800;
@@ -27,7 +28,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	int			numPlayers;
 
 	Map[]		maps;
-	int			MapGridSize = 40;
+	int			MapGridSize = 20;
 	Snake		s1;
 	Snake		s2;
 	
@@ -48,6 +49,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	final int	P2Up = 38;		// [UP]
 	final int	P2Dn = 40;		// [DOWN]
 	final int	PAUSE = 32;		// [SPACE]
+	final int	P2ADD = 113;	// [F3]
 	final int	DEBUG = 114;	// [F3]
 	final int	RESET = 80;		// [P]
 
@@ -66,23 +68,24 @@ public class Game extends Applet implements Runnable, KeyListener
 		gameRunning	= true;
 		gamePaused	= true;
 		showDebug	= false;
-		numPlayers	= 1;
+		numPlayers	= 2;
  
 		//define ALL MAPS
 		int numMaps = 1;
 		maps = new Map[numMaps];
 		Map m = new Map(WDTH, HGHT, MapGridSize);
 		//m.addWall_box(m.width/4, m.height/4, (m.width/4)*3, (m.height/4)*3);
-		m.p1x = WDTH-(2*MapGridSize);
-		m.p1y = HGHT-(2*MapGridSize);
+		m.p1x = (3*MapGridSize);
+		m.p1y = HGHT-(8*MapGridSize);
+		m.p2x = WDTH-(3*MapGridSize);
+		m.p2y = HGHT-(8*MapGridSize);
 		maps[0] = m;
 		//
 		// add more maps
 		//
 		
 		//put Snake(s) on map
-		s1 = new Snake("Snake1", Color.red, 5, (maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p1x, maps[0].p1y, Snake.direction.up, 1f, maps[0].grid);
-		s2 = new Snake("Snake2", Color.blue, 5,(maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p2x, maps[0].p2y, Snake.direction.up, 1f, maps[0].grid);
+		reinitializeMap();
 	}
 
 	 
@@ -114,20 +117,23 @@ public class Game extends Applet implements Runnable, KeyListener
 				//============================
 				//Move the Snake's Position
 				//============================
-				if( !s1.isPaused )
-				{
-					//check if turn, then move forward.
-					s1.moveSnake();
-				}
+				//TODO: turn the else clauses into a function like ProcessSnakePauseTime(Snake s)
+				if( !s1.isPaused ) s1.moveSnake();
 				else
-				{
 					if( s1.pauseTime--<=0 )
 					{
 						s1.pauseTime = s1.maxPause;
 						s1.isPaused = false;
 					}
-				}
-				
+
+				if( !s2.isPaused ) s2.moveSnake();
+				else
+					if( s2.pauseTime--<=0 )
+					{
+						s2.pauseTime = s2.maxPause;
+						s2.isPaused = false;
+					}
+
 				//============================
 				//PRINT DEBUG INFO
 				//============================
@@ -136,6 +142,7 @@ public class Game extends Applet implements Runnable, KeyListener
 				if(showDebug)
 				{
 					if (s1.turning!=null)System.out.println(s1.name + s1.head.toString() + " dir:"+s1.facing.toString() + " turning:"+s1.turning.toString() + " in " + s1.distUntilTurn);
+					if (s2.turning!=null)System.out.println(s2.name + s2.head.toString() + " dir:"+s2.facing.toString() + " turning:"+s2.turning.toString() + " in " + s2.distUntilTurn);
 					/*
 					System.out.println("Ball    X:"+b.getX()+" Y:"+b.getY()+ " RADIUS:"+b.getRadius());
 					System.out.println("Paddle1 X:"+p1.getX()+" Y:"+p1.getY()+ " WIDTH:"+p1.getWidth()+" HEIGHT:"+p1.getHeight());
@@ -157,7 +164,7 @@ public class Game extends Applet implements Runnable, KeyListener
 			{
 				// This sets the Frames Per Second, not the ball speed.
 				Thread.sleep(12); //delay.  20ms = 50 frames per second
-				if( showDebug ) Thread.sleep(88);
+				if( showDebug ) Thread.sleep(38);
 			}
 			catch(InterruptedException ie)
 			{
@@ -208,34 +215,10 @@ public class Game extends Applet implements Runnable, KeyListener
 				}	
 		}
 		
-		//draw Snake1 head
-		//g.setColor(s1.color);
-		//g.fillRoundRect(s1.head.x-(s1.width/2), s1.head.y-(s1.width/2), s1.width, s1.width, s1.width/2, s1.width/2);
-
-		//draw Snake1 tail
-		//g.setColor(Color.white);
-		//g.fillRoundRect(s1.tail.x-(s1.width/4), s1.tail.y-(s1.width/4), s1.width/2, s1.width/2, s1.width/2, s1.width/2);
-
-		//draw every corner in Snake1
-		//g.setColor(Color.black);
-		//for(int i = 0; i<s1.corners.size(); i++)
-		//{
-		//	Coord c = s1.corners.get(i);
-		//	g.fillRect(c.x-(s1.width/4), c.y-(s1.width/4), s1.width/2, s1.width/2);
-		//}
 		
 		//draw every segment of the snake
-		g.setColor(s1.color);
-		Coord pnt1 = s1.head;
-		Coord pnt2;
-		for(int i=s1.corners.size()-1; i>=0; i--)
-		{
-			pnt2 = s1.corners.get(i); //get next point
-			drawSegment(g, pnt1, pnt2, grid); // draw segment between 2 points
-			pnt1 = pnt2;  // iterate points
-		}
-		//draw line from last pnt to tail
-		drawSegment(g, pnt1, s1.tail, grid);
+		drawSnake(g, s1);
+		if( numPlayers==2 ) drawSnake(g, s2);
 		
 		//draw temporary grid, showing where snake can turn.
 		g.setColor(wallColor);
@@ -247,15 +230,16 @@ public class Game extends Applet implements Runnable, KeyListener
 			int widthThird = WDTH/3;
 			int heightThird = HGHT/3;
 			
-			g.setColor(Color.darkGray);
+			g.setColor(wallColor);
 			g.fillRoundRect(widthThird, heightThird, widthThird, heightThird, WDTH/20, HGHT/20);
-			g.setColor(Color.cyan);
+			g.setColor(backgroundColor);
 			g.setFont(new Font("monospaced", Font.BOLD, 22));
 			g.drawString("P A U S E D", widthCenter - 72, heightThird + 30);
 			g.setFont(new Font("monospaced", Font.BOLD, 18));
 			g.drawString("Play Again - [P] key", widthCenter - 132, heightThird + 100);
-			g.drawString("Show Debug - [F3] key", widthCenter - 132, heightThird + 140);
-			g.drawString("Unpause    - [SPACE BAR]", widthCenter - 132, heightThird + 180);
+			g.drawString("Toggle P2  - [F2] key", widthCenter - 132, heightThird + 140);
+			g.drawString("Show Debug - [F3] key", widthCenter - 132, heightThird + 180);
+			g.drawString("Unpause    - [SPACE BAR]", widthCenter - 132, heightThird + 220);
 		}
 
 		//DRAW WINNING MENU
@@ -271,6 +255,40 @@ public class Game extends Applet implements Runnable, KeyListener
 	}
 
 	
+	private void drawSnake(Graphics g, Snake s)
+	{
+		
+		//draw Snake1 head
+		//g.setColor(s1.color);
+		//g.fillRoundRect(s1.head.x-(s1.width/2), s1.head.y-(s1.width/2), s1.width, s1.width, s1.width/2, s1.width/2);
+
+		//draw Snake1 tail
+		//g.setColor(Color.white);
+		//g.fillRoundRect(s1.tail.x-(s1.width/4), s1.tail.y-(s1.width/4), s1.width/2, s1.width/2, s1.width/2, s1.width/2);
+
+		//draw every corner in Snake1
+		//g.setColor(Color.black);
+		//for(int i = 0; i<s1.corners.size(); i++)
+		//{
+		//	Coord c = s1.corners.get(i);
+		//	g.fillRect(c.x-(s1.width/4), c.y-(s1.width/4), s1.width/2, s1.width/2);
+
+		
+		int grid = s.width;
+		g.setColor(s.color);
+		Coord pnt1 = s.head;
+		Coord pnt2;
+		for(int i=s.corners.size()-1; i>=0; i--)
+		{
+			pnt2 = s.corners.get(i); //get next point
+			drawSegment(g, pnt1, pnt2, grid); // draw segment between 2 points
+			pnt1 = pnt2;  // iterate points
+		}
+		//draw line from last pnt to tail
+		drawSegment(g, pnt1, s.tail, grid);
+	}
+	
+	
 	private void drawSegment(Graphics g, Coord c1, Coord c2, int grd)
 	{
 
@@ -279,14 +297,13 @@ public class Game extends Applet implements Runnable, KeyListener
 		int height = Math.abs(c1.getVerticalDistanceTo(c2));
 		
 		if( c1.isDirectlyAbove(c2) )
-			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, grd-(2*buffer), height+grd-buffer, grd/2, grd/2);
+			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, grd-(2*buffer), height+(grd-(2*buffer)), grd/2, grd/2);
 		if( c1.isDirectlyBelow(c2) )
-			g.fillRoundRect(c1.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, grd-(2*buffer), height+grd-buffer, grd/2, grd/2);
+			g.fillRoundRect(c1.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, grd-(2*buffer), height+(grd-(2*buffer)), grd/2, grd/2);
 		if( c1.isDirectlyLeftOf(c2) )
-			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, width+grd-buffer, grd-(2*buffer), grd/2, grd/2);
+			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, width+(grd-(2*buffer)), grd-(2*buffer), grd/2, grd/2);
 		if( c1.isDirectlyRightOf(c2) )
-			g.fillRoundRect(c2.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, width+grd-buffer, grd-(2*buffer), grd/2, grd/2);
-	
+			g.fillRoundRect(c2.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, width+(grd-(2*buffer)), grd-(2*buffer), grd/2, grd/2);
 	}
 	
 	
@@ -369,6 +386,10 @@ public class Game extends Applet implements Runnable, KeyListener
 		if (ke.getKeyCode() == PAUSE)
 			gamePaused = !gamePaused;
 
+		//TOGGLE PLAYER 2
+		if (ke.getKeyCode() == DEBUG)
+			showDebug = !showDebug;
+
 		//TOGGLE DEBUG INFO
 		if (ke.getKeyCode() == DEBUG)
 			showDebug = !showDebug;
@@ -384,5 +405,17 @@ public class Game extends Applet implements Runnable, KeyListener
 	
 	public void keyReleased(KeyEvent ke) { }
 
+	
+	public void reinitializeMap() 
+	{
+	
+		//set the map
+		
+		//reInitialize all snakes. set each Snake on the board, per numPlayers
+		s1 = new Snake("Snake1", new Color(0,128,0), 5, (maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p1x, maps[0].p1y, Snake.direction.up, 1f, maps[0].grid);
+		if( numPlayers==2 ) 
+			s2 = new Snake("Snake2", new Color(25,25,112), 5,(maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p2x, maps[0].p2y, Snake.direction.up, 1f, maps[0].grid);
+		
+	}
 
 }
