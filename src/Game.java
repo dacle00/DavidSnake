@@ -1,10 +1,7 @@
 import java.applet.*;
-import java.util.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.net.URL;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Rectangle2D;
 import java.awt.event.KeyListener;
 import javax.sound.sampled.*;
 
@@ -30,7 +27,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	int			numPlayers;
 
 	Map[]		maps;
-	int			MapGridSize = 50;
+	int			MapGridSize = 40;
 	Snake		s1;
 	Snake		s2;
 	
@@ -79,13 +76,13 @@ public class Game extends Applet implements Runnable, KeyListener
 		m.p1x = WDTH-(2*MapGridSize);
 		m.p1y = HGHT-(2*MapGridSize);
 		maps[0] = m;
-		// TODO: more maps.
+		//
+		// add more maps
+		//
 		
 		//put Snake(s) on map
-		s1 = new Snake("Snake1", Color.red, 5, maps[0].grid, maps[0].p1x, maps[0].p1y, Snake.direction.up, 1f, maps[0].grid);
-		s2 = new Snake("Snake2", Color.blue, 5, maps[0].grid, maps[0].p2x, maps[0].p2y, Snake.direction.up, 1f, maps[0].grid);
-		if( numPlayers==2 && maps[0].p2StartLocation ) 
-			s2 = new Snake("Snake1", Color.blue, 5, 10, maps[0].p2x, maps[0].p2y, Snake.direction.left, 1f, maps[0].grid);
+		s1 = new Snake("Snake1", Color.red, 5, (maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p1x, maps[0].p1y, Snake.direction.up, 1f, maps[0].grid);
+		s2 = new Snake("Snake2", Color.blue, 5,(maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p2x, maps[0].p2y, Snake.direction.up, 1f, maps[0].grid);
 	}
 
 	 
@@ -120,7 +117,7 @@ public class Game extends Applet implements Runnable, KeyListener
 				if( !s1.isPaused )
 				{
 					//check if turn, then move forward.
-					moveSnake(s1);
+					s1.moveSnake();
 				}
 				else
 				{
@@ -134,11 +131,11 @@ public class Game extends Applet implements Runnable, KeyListener
 				//============================
 				//PRINT DEBUG INFO
 				//============================
-				if (s1.turning!=null)System.out.println(s1.name + "   X:"+s1.headX+" Y:"+s1.headY+ " dir:"+s1.facing.toString() + " turning:"+s1.turning.toString() + " in " + s1.distUntilTurn);
 
 				
 				if(showDebug)
 				{
+					if (s1.turning!=null)System.out.println(s1.name + s1.head.toString() + " dir:"+s1.facing.toString() + " turning:"+s1.turning.toString() + " in " + s1.distUntilTurn);
 					/*
 					System.out.println("Ball    X:"+b.getX()+" Y:"+b.getY()+ " RADIUS:"+b.getRadius());
 					System.out.println("Paddle1 X:"+p1.getX()+" Y:"+p1.getY()+ " WIDTH:"+p1.getWidth()+" HEIGHT:"+p1.getHeight());
@@ -210,13 +207,21 @@ public class Game extends Applet implements Runnable, KeyListener
 				}	
 		}
 		
-		//draw Snake1
+		//draw Snake1 head
 		g.setColor(s1.color);
-		g.fillRect(s1.headX-(s1.width/2), s1.headY-(s1.width/2), s1.width, s1.width);
-		
-		//draw temporary dot to show the actual SINGLE POINT of paddles
-		g.setColor(Color.white);  
-		g.fillOval(s1.headX,  s1.headY, 3, 3);
+		g.fillRoundRect(s1.head.x-(s1.width/2), s1.head.y-(s1.width/2), s1.width, s1.width, s1.width/2, s1.width/2);
+
+		//draw Snake1 tail
+		g.setColor(Color.white);
+		g.fillRoundRect(s1.tail.x-(s1.width/4), s1.tail.y-(s1.width/4), s1.width/2, s1.width/2, s1.width/2, s1.width/2);
+
+		//draw every corner in Snake1
+		g.setColor(Color.black);
+		for(int x = 0; x<s1.corners.size(); x++)
+		{
+			Coord c = s1.corners.get(x);
+			g.fillRect(c.x-(s1.width/4), c.y-(s1.width/4), s1.width/2, s1.width/2);
+		}
 		
 		//draw temporary grid, showing where snake can turn.
 		g.setColor(wallColor);
@@ -229,7 +234,7 @@ public class Game extends Applet implements Runnable, KeyListener
 			int heightThird = HGHT/3;
 			
 			g.setColor(Color.darkGray);
-			g.fillRoundRect(widthThird, heightThird, widthThird, heightThird, 10, 10);
+			g.fillRoundRect(widthThird, heightThird, widthThird, heightThird, WDTH/20, HGHT/20);
 			g.setColor(Color.cyan);
 			g.setFont(new Font("monospaced", Font.BOLD, 22));
 			g.drawString("P A U S E D", widthCenter - 72, heightThird + 30);
@@ -346,119 +351,5 @@ public class Game extends Applet implements Runnable, KeyListener
 	
 	public void keyReleased(KeyEvent ke) { }
 
-	
-	public void moveSnake(Snake s)
-	{
-		//check if turn is requested.
-		// - if no turn requested, simply move forward the full speed( total move distance).
-		// - if turn requested: compare speed(total move distance)
-		//    - if distUntilTurn == 0:  turn and move full speed.
-		//    - if distUntilTurn>0 AND distUntilTurn>speed:  move full speed
-		//    - if distUntilTurn<speed - move distanceToTurn, turn, move remaining distance.
-		//recalc distUntilTurn
-		int dut = Math.abs(s.distUntilTurn);
-		float spd = Math.abs(s.speed);
-		Snake.direction dir_facing = s.facing;
-		Snake.direction dir_turn = s.turning;
-		
-		
-		if( dir_turn!=null && dir_turn!=dir_facing )
-		{
-			//turn is requested
-			if( dut==0 )
-			{
-				//turn
-				turnSnake(s);
-				//move full speed
-				forward(s,  spd);
-			}
-			else if(dut>=spd )
-			{
-				//move full speed
-				forward(s,  spd);
-			}
-			else if( dut>spd )
-			{
-				//move dut
-				forward(s,  dut);
-				//turn
-				turnSnake(s);
-				//move remaining distance
-				forward(s,  spd-dut);
-				
-			}
-			else
-			{
-				//THIS SHOULD NEVER HAPPEN
-				System.err.println("ERROR IN MOVEMENT FLOW");
-				System.out.println("ERROR IN MOVEMENT FLOW");
-			}
-		}
-		else
-		{
-			//assume no turn is requested. move full distance.
-			forward(s,  spd);
-		}
-		
-		//recalculate dut and store to snake.
-		calculateDistanceUntilTurn(s);
-		
-	}
-	
-	
-	public void forward(Snake s, float distance)
-	{
-		//logic for moving in a straight line, the distance specified
-		int x = s.headX;
-		int y = s.headY;
-		Snake.direction dir = s.facing;
-		
-		if( dir==Snake.direction.left )
-			s.headX = (int)(x-distance);
-		else if( dir==Snake.direction.right )
-			s.headX = (int)(x+distance);
-		else if( dir==Snake.direction.up )
-			s.headY = (int)(y-distance);
-		else if( dir==Snake.direction.down )
-			s.headY = (int)(y+distance);
-		
-	}
-	
-	
-	public void turnSnake(Snake s)
-	{
-		s.facing = s.turning;
-		s.turning = null;
-	}
-	
-	
-	public void calculateDistanceUntilTurn(Snake s)
-	{
-		int grid = maps[0].grid;
-		Snake.direction dir = s.facing;
-		int x = Math.abs(s.headX);
-		int y = Math.abs(s.headY);
-		int dut = -1;
-		
-		if( dir==Snake.direction.right || dir==Snake.direction.left)
-		{
-			if( x%grid==0 )
-				dut=0;
-			else if( dir==Snake.direction.right )
-				dut = grid - (x%grid);
-			else if( dir==Snake.direction.left )
-				dut = x%grid;
-		}
-		else if( dir==Snake.direction.down || dir==Snake.direction.up )
-		{
-			if( y%grid==0 )
-				dut=0;
-			else if( dir==Snake.direction.down )
-				dut = grid - (y%grid);
-			else if( dir==Snake.direction.up )
-				dut = y%grid;
-		}
-			
-		s.distUntilTurn = dut;
-	}
+
 }
