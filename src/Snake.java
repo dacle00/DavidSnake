@@ -142,7 +142,6 @@ public class Snake
 		//logic for moving in a straight line, the distance specified
 		int x = head.x;
 		int y = head.y;
-		direction tailDir = getTailDir();
 	
 		//move head forward
 		if( facing==direction.left )
@@ -154,6 +153,9 @@ public class Snake
 		else if( facing==direction.down )
 			head.y = (int)(y+distance);
 		
+		x = tail.x;
+		y = tail.y;
+		direction tailDir = getTailDir();
 		//determine if tail should move
 		if( !tail.equals(head) && !corners.contains(tail) )
 		{
@@ -236,33 +238,31 @@ public class Snake
 		
 		Coord oldestCorner;
 		direction d = direction.NONE;
-		while( !corners.isEmpty()  && corners.getFirst().equals(tail) )
-			corners.removeFirst();
-				
+		
+		while( !corners.isEmpty() && corners.getFirst().equals(tail) )
+		corners.removeFirst();
+
+		//if there are no corners, get direction to head instead
 		if( !corners.isEmpty() )
-		{
 			oldestCorner = corners.getFirst();
-					
-			//LEFT or RIGHT
-			if( tail.y==oldestCorner.y )
-				if( tail.x<oldestCorner.x )
-					d = direction.right;
-				else
-					d = direction.left;
-			else if( tail.x==oldestCorner.x )
-				if( tail.y<oldestCorner.y )
-					d = direction.up;
-				else
-					d = direction.down;
-			else
-			{
-				//THIS SHOULD NEVER HAPPEN
-				System.err.println("ERROR IN TAIL MOVEMENT FLOW");
-				System.out.println("ERROR IN TAIL MOVEMENT FLOW");
-			}
-		}
 		else
-			d = direction.NONE;  //list of corners was empty
+			oldestCorner = head;
+
+		//LEFT or RIGHT
+		if( tail.isDirectlyLeftOf(oldestCorner) )
+				d = direction.right;
+		else if( tail.isDirectlyRightOf(oldestCorner) )
+			d = direction.left;
+		else if( tail.isDirectlyAbove(oldestCorner) )
+			d = direction.down;
+		else if( tail.isDirectlyBelow(oldestCorner) )
+			d = direction.up;
+		else
+		{
+			//THIS SHOULD NEVER HAPPEN
+			//System.err.println("ERROR IN TAIL MOVEMENT FLOW");
+			//System.out.println("ERROR IN TAIL MOVEMENT FLOW");
+		}
 
 		return d;
 	}

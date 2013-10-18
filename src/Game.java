@@ -157,6 +157,7 @@ public class Game extends Applet implements Runnable, KeyListener
 			{
 				// This sets the Frames Per Second, not the ball speed.
 				Thread.sleep(12); //delay.  20ms = 50 frames per second
+				if( showDebug ) Thread.sleep(88);
 			}
 			catch(InterruptedException ie)
 			{
@@ -208,20 +209,33 @@ public class Game extends Applet implements Runnable, KeyListener
 		}
 		
 		//draw Snake1 head
-		g.setColor(s1.color);
-		g.fillRoundRect(s1.head.x-(s1.width/2), s1.head.y-(s1.width/2), s1.width, s1.width, s1.width/2, s1.width/2);
+		//g.setColor(s1.color);
+		//g.fillRoundRect(s1.head.x-(s1.width/2), s1.head.y-(s1.width/2), s1.width, s1.width, s1.width/2, s1.width/2);
 
 		//draw Snake1 tail
-		g.setColor(Color.white);
-		g.fillRoundRect(s1.tail.x-(s1.width/4), s1.tail.y-(s1.width/4), s1.width/2, s1.width/2, s1.width/2, s1.width/2);
+		//g.setColor(Color.white);
+		//g.fillRoundRect(s1.tail.x-(s1.width/4), s1.tail.y-(s1.width/4), s1.width/2, s1.width/2, s1.width/2, s1.width/2);
 
 		//draw every corner in Snake1
-		g.setColor(Color.black);
-		for(int x = 0; x<s1.corners.size(); x++)
+		//g.setColor(Color.black);
+		//for(int i = 0; i<s1.corners.size(); i++)
+		//{
+		//	Coord c = s1.corners.get(i);
+		//	g.fillRect(c.x-(s1.width/4), c.y-(s1.width/4), s1.width/2, s1.width/2);
+		//}
+		
+		//draw every segment of the snake
+		g.setColor(s1.color);
+		Coord pnt1 = s1.head;
+		Coord pnt2;
+		for(int i=s1.corners.size()-1; i>=0; i--)
 		{
-			Coord c = s1.corners.get(x);
-			g.fillRect(c.x-(s1.width/4), c.y-(s1.width/4), s1.width/2, s1.width/2);
+			pnt2 = s1.corners.get(i); //get next point
+			drawSegment(g, pnt1, pnt2, grid); // draw segment between 2 points
+			pnt1 = pnt2;  // iterate points
 		}
+		//draw line from last pnt to tail
+		drawSegment(g, pnt1, s1.tail, grid);
 		
 		//draw temporary grid, showing where snake can turn.
 		g.setColor(wallColor);
@@ -256,7 +270,26 @@ public class Game extends Applet implements Runnable, KeyListener
 		}
 	}
 
+	
+	private void drawSegment(Graphics g, Coord c1, Coord c2, int grd)
+	{
+
+		int buffer = (int)(0.2*grd);
+		int width = Math.abs(c1.getHorizontalDistanceTo(c2));
+		int height = Math.abs(c1.getVerticalDistanceTo(c2));
 		
+		if( c1.isDirectlyAbove(c2) )
+			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, grd-(2*buffer), height+grd-buffer, grd/2, grd/2);
+		if( c1.isDirectlyBelow(c2) )
+			g.fillRoundRect(c1.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, grd-(2*buffer), height+grd-buffer, grd/2, grd/2);
+		if( c1.isDirectlyLeftOf(c2) )
+			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, width+grd-buffer, grd-(2*buffer), grd/2, grd/2);
+		if( c1.isDirectlyRightOf(c2) )
+			g.fillRoundRect(c2.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, width+grd-buffer, grd-(2*buffer), grd/2, grd/2);
+	
+	}
+	
+	
 	public void playSound(String sound)
 	{
 		try {

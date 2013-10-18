@@ -37,19 +37,28 @@ public class Coord {
 	
 	public boolean isHigherThan(Coord c)
 	{
-		return( y<c.y);
+		return( y<c.y );
 	}
 	public boolean islowerThan(Coord c)
 	{
-		return( y>c.y);
+		return( y>c.y );
 	}
 	public boolean isLefterThan(Coord c)
 	{
-		return( x<c.x);
+		return( x<c.x );
 	}
 	public boolean isRighterThan(Coord c)
 	{
-		return( x<c.x);
+		return( x<c.x );
+	}
+	
+	public boolean isHorizontallyAlignedWith(Coord c)
+	{
+		return( y==c.y );
+	}
+	public boolean isVerticallyAlignedWith(Coord c)
+	{
+		return( x==c.x );
 	}
 
 	public boolean isDirectlyAbove(Coord c)
@@ -69,4 +78,14 @@ public class Coord {
 		return( x>c.x && y==c.y );
 	}
 
+	
+	public int getHorizontalDistanceTo(Coord c)
+	{
+		return( x-c.x );
+	}
+	public int getVerticalDistanceTo(Coord c)
+	{
+		return( y-c.y );
+	}
+	
 }
