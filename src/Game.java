@@ -5,6 +5,7 @@ import java.awt.event.*;
 import java.net.URL;
 import java.awt.event.KeyListener;
 import javax.sound.sampled.*;
+import java.util.*;
 
 
 public class Game extends Applet implements Runnable, KeyListener
@@ -28,9 +29,13 @@ public class Game extends Applet implements Runnable, KeyListener
 	int			numPlayers;
 
 	Map[]		maps;
+	int			numMaps = 1;
+	int			level;
+	Map			CurrentLevel;
 	int			MapGridSize = 20;
 	Snake		s1;
 	Snake		s2;
+	ArrayList<Pellet>	pellets;
 	
 	final int	PADDINGTOP = 0;
 	final int   PADDINGBOTTOM = 0;
@@ -49,7 +54,8 @@ public class Game extends Applet implements Runnable, KeyListener
 	final int	P2Up = 38;		// [UP]
 	final int	P2Dn = 40;		// [DOWN]
 	final int	PAUSE = 32;		// [SPACE]
-	final int	P2ADD = 113;	// [F3]
+	final int	PLAY1 = 122;	// [F11]
+	final int	PLAY2 = 123;	// [F12]
 	final int	DEBUG = 114;	// [F3]
 	final int	RESET = 80;		// [P]
 
@@ -68,10 +74,10 @@ public class Game extends Applet implements Runnable, KeyListener
 		gameRunning	= true;
 		gamePaused	= true;
 		showDebug	= false;
-		numPlayers	= 2;
+		numPlayers	= 1;
+		level = 0;
  
 		//define ALL MAPS
-		int numMaps = 1;
 		maps = new Map[numMaps];
 		Map m = new Map(WDTH, HGHT, MapGridSize);
 		//m.addWall_box(m.width/4, m.height/4, (m.width/4)*3, (m.height/4)*3);
@@ -134,6 +140,40 @@ public class Game extends Applet implements Runnable, KeyListener
 						s2.isPaused = false;
 					}
 
+				
+				
+
+				
+				//============================
+				//Add Pellets ?
+				//============================
+				// maintain at least 1 pellet per player
+				if( pellets.size()<numPlayers )
+					pellets.add(new Pellet());
+					
+				//TODO: pellet rules
+					//remove old pellets?
+					//pellets apply to a specific player?
+					//pellets drift/move?
+					//pellets decay? (value or size)
+					//pellets grow?
+					//pellets flash
+					//pellets spawn for other reasons?
+
+
+				
+				//============================
+				// Detect Collisions
+				//============================
+				//TODO:
+					// Snake on Snake collision
+					// Snake on Wall collision
+					// Snake on Pellet collision
+					// Pellet on Wall collision (if pellets move)
+					// Pellet on Pellet collision (if pellets move)
+
+				
+				
 				//============================
 				//PRINT DEBUG INFO
 				//============================
@@ -201,15 +241,15 @@ public class Game extends Applet implements Runnable, KeyListener
 		
 		//draw the current map
 		g.setColor(wallColor);
-		int grid = maps[0].grid;
-		int w = maps[0].width;
-		int h = maps[0].height;
+		int grid = CurrentLevel.grid;
+		int w = CurrentLevel.width;
+		int h = CurrentLevel.height;
 		for( int x=0; x<w; x++)
 		{
 			g.drawLine(0, x*grid, WDTH, x*grid);
 			g.drawLine(x*grid, 0, x*grid, HGHT);
 			for( int y=0; y<h; y++)
-				if( maps[0].map[x][y]==Map.tile.wall )
+				if( CurrentLevel.map[x][y]==Map.tile.wall )
 				{
 					g.fillRect((x*grid)-(grid/2), (y*grid)-(grid/2), grid, grid);
 				}	
@@ -236,8 +276,8 @@ public class Game extends Applet implements Runnable, KeyListener
 			g.setFont(new Font("monospaced", Font.BOLD, 22));
 			g.drawString("P A U S E D", widthCenter - 72, heightThird + 30);
 			g.setFont(new Font("monospaced", Font.BOLD, 18));
-			g.drawString("Play Again - [P] key", widthCenter - 132, heightThird + 100);
-			g.drawString("Toggle P2  - [F2] key", widthCenter - 132, heightThird + 140);
+			g.drawString("One Player - [F11] key", widthCenter - 132, heightThird + 100);
+			g.drawString("Two Player - [F12] key", widthCenter - 132, heightThird + 140);
 			g.drawString("Show Debug - [F3] key", widthCenter - 132, heightThird + 180);
 			g.drawString("Unpause    - [SPACE BAR]", widthCenter - 132, heightThird + 220);
 		}
@@ -386,19 +426,25 @@ public class Game extends Applet implements Runnable, KeyListener
 		if (ke.getKeyCode() == PAUSE)
 			gamePaused = !gamePaused;
 
-		//TOGGLE PLAYER 2
-		if (ke.getKeyCode() == DEBUG)
-			showDebug = !showDebug;
+		//TOGGLE To 1-player game
+		if (ke.getKeyCode() == PLAY1)
+		{
+				numPlayers=1;
+				reinitializeMap();
+		}
+
+		//TOGGLE To 2-player game
+		if (ke.getKeyCode() == PLAY2)
+		{
+				numPlayers=2;
+				reinitializeMap();
+		}
+
 
 		//TOGGLE DEBUG INFO
 		if (ke.getKeyCode() == DEBUG)
 			showDebug = !showDebug;
 
-		//RESET THE GAME
-		if (gamePaused && ke.getKeyCode() == RESET)
-		{
-			//winGame(new Paddle());
-		}
 
 	}
 	
@@ -408,14 +454,20 @@ public class Game extends Applet implements Runnable, KeyListener
 	
 	public void reinitializeMap() 
 	{
+		if( showDebug ) System.out.println("Toggled Number of Players: " + numPlayers);
 	
 		//set the map
+		CurrentLevel = maps[level];
 		
 		//reInitialize all snakes. set each Snake on the board, per numPlayers
-		s1 = new Snake("Snake1", new Color(0,128,0), 5, (maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p1x, maps[0].p1y, Snake.direction.up, 1f, maps[0].grid);
+		s1 = new Snake("Snake1", new Color(0,128,0), 5, (CurrentLevel.width/2)*(CurrentLevel.width/CurrentLevel.grid), CurrentLevel.grid, CurrentLevel.p1x, CurrentLevel.p1y, Snake.direction.up, 1f, CurrentLevel.grid);
 		if( numPlayers==2 ) 
-			s2 = new Snake("Snake2", new Color(25,25,112), 5,(maps[0].width/2)*(maps[0].width/maps[0].grid), maps[0].grid, maps[0].p2x, maps[0].p2y, Snake.direction.up, 1f, maps[0].grid);
+			s2 = new Snake("Snake2", new Color(25,25,112), 5,(CurrentLevel.width/2)*(CurrentLevel.width/CurrentLevel.grid), CurrentLevel.grid, CurrentLevel.p2x, CurrentLevel.p2y, Snake.direction.up, 1f, CurrentLevel.grid);
+		else
+			s2 = new Snake();
 		
+		//set the pellets
+		pellets = new ArrayList<Pellet>(numPlayers);
 	}
 
 }
