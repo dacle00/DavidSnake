@@ -5,6 +5,7 @@ public class Snake
 {
 	public String name;
 	public Color color;
+	public Color color_inv;
 	public int length;
 	public int lengthMAX;
 	public int width;
@@ -19,6 +20,7 @@ public class Snake
 	public direction facing;
 	public direction turning;
 	public boolean isPaused = false;
+	public boolean isColliding = false;
 	public int maxPause = 120;
 	public int pauseTime;
 	public int score;
@@ -28,6 +30,7 @@ public class Snake
 	{
 		name	= "Snake";
 		color	= Color.green;
+		color_inv = setComplimentColor();
 		width	= 2;
 		length	= 5;
 		lengthMAX	= 9999;
@@ -39,6 +42,7 @@ public class Snake
 		facing	= direction.up;
 		head = new Coord();
 		tail = placeTail();
+		tail_prev = null;
 		isPaused = false; //todo TRUE
 		pauseTime = 120;
 		score = 0;
@@ -50,6 +54,7 @@ public class Snake
 	{
 		name = pName;
 		color = c;
+		color_inv = setComplimentColor();
 		width = pWidth;
 		length = pLength;
 		lengthMAX	= pLengthMax;
@@ -61,8 +66,27 @@ public class Snake
 		facing = dir;
 		head = new Coord(headXLoc, headYLoc);
 		tail = placeTail();
+		tail_prev = null;
 		score = 0;
 		distUntilTurn = -1;		
+	}
+	
+	
+	public Color setComplimentColor() {
+	    // get alpha and opposing colors
+	    int alpha = color.getAlpha();
+	    int red = 255-color.getRed();
+	    int blue = 255-color.getBlue();
+	    int green = 255-color.getGreen();
+
+	    /* 
+	    //find compliments
+	    red = (~red) & 0xff;
+	    blue = (~blue) & 0xff;
+	    green = (~green) & 0xff;
+	    */
+	    
+	    return new Color(red, green, blue, alpha);
 	}
 	
 	

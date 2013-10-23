@@ -1,3 +1,5 @@
+import java.util.Random;
+
 
 public class Map {
 
@@ -10,7 +12,7 @@ public class Map {
 	boolean p1StartLocation = false;
 	boolean p2StartLocation = false;
 	
-	enum tile {blank, wall, snakebody, snakehead, p1Start, p2Start};
+	enum tile {blank, wall, snake1, snake2, p1Start, p2Start, pellet};
 	
 	
 	public Map()
@@ -25,6 +27,10 @@ public class Map {
 		p2y = 1;
 		p1StartLocation = true;
 		p2StartLocation = false;
+		//blank all tiles
+		for( int x=0; x<width; x++)
+			for( int y=0; y<height; y++)
+				map[x][y] = tile.blank;
 	}
 	
 	
@@ -40,6 +46,12 @@ public class Map {
 		height = hght/gridSize;
 		grid = gridSize;
 		map = new tile[width][height];
+
+		//blank all tiles
+		for( int x=0; x<width; x++)
+			for( int y=0; y<height; y++)
+				map[x][y] = tile.blank;
+
 		//draw horizontal edges
 		for(int x=0; x<width; x++)
 		{
@@ -72,6 +84,7 @@ public class Map {
 	}
 
 	/* 	XXXXXXXXXXXXX     
+	 * 	XXXXXXXXXXXXX
 	 * 	XX         XX
 	 * 	XX         XX
 	 * 	XXXXXXXXXXXXX
@@ -133,5 +146,37 @@ public class Map {
 				map[x2][y2] = tile.p2Start;
 		}
 	}
+	
+	public tile getTileAt(Coord c)
+	{
+		int x=c.x/grid, y=c.y/grid;
+		
+		if( x<width-1 && y<height-1 )
+			return map[x][y];
+		else
+			return( tile.wall);
+	}
+	public void setTileAt(Coord c, tile t)
+	{
+		map[c.x/grid][c.y/grid]=t;
+	}
 
+	
+	public Coord getRandomEmptyCoord()
+	{
+		return getRandomEmptyCoord(System.currentTimeMillis());
+	}
+	public Coord getRandomEmptyCoord(long seed)
+	{
+		Coord c = new Coord();
+		Random rnd = new Random(seed);
+		c.x = rnd.nextInt(width-1);
+		c.y = rnd.nextInt(height-1);
+		while( getTileAt(c)!=tile.wall && getTileAt(c)!=tile.pellet )
+		{
+			c.x = rnd.nextInt();
+			c.y = rnd.nextInt();
+		}
+		return c;
+	}
 }

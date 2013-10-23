@@ -18,6 +18,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	Graphics 	dbGraphics;
 	Color		backgroundColor = new Color(220,255,220);	//light gray, with green tint
 	Color		wallColor = new Color(64,128,64);  			// dark gray, with green tint
+	Color		pelletColor = Color.white;
 
 	int	WDTH	= 800;
 	int	HGHT	= 800;
@@ -124,32 +125,15 @@ public class Game extends Applet implements Runnable, KeyListener
 				//Move the Snake's Position
 				//============================
 				//TODO: turn the else clauses into a function like ProcessSnakePauseTime(Snake s)
-				if( !s1.isPaused ) s1.moveSnake();
-				else
-					if( s1.pauseTime--<=0 )
-					{
-						s1.pauseTime = s1.maxPause;
-						s1.isPaused = false;
-					}
+				processSnakeMovement (s1);
+				if( numPlayers==2 ) processSnakeMovement (s2);
 
-				if( !s2.isPaused ) s2.moveSnake();
-				else
-					if( s2.pauseTime--<=0 )
-					{
-						s2.pauseTime = s2.maxPause;
-						s2.isPaused = false;
-					}
-
-				
-				
-
-				
 				//============================
 				//Add Pellets ?
 				//============================
 				// maintain at least 1 pellet per player
-				if( pellets.size()<numPlayers )
-					pellets.add(new Pellet());
+				//if( pellets.size()<numPlayers )
+				//	pellets.add(new Pellet("pellet", 1, CurrentLevel.grid, CurrentLevel.getRandomEmptyCoord(), true, pelletColor));
 					
 				//TODO: pellet rules
 					//remove old pellets?
@@ -160,20 +144,73 @@ public class Game extends Applet implements Runnable, KeyListener
 					//pellets flash
 					//pellets spawn for other reasons?
 
-
-				
 				//============================
 				// Detect Collisions
 				//============================
-				//TODO:
-					// Snake on Snake collision
-					// Snake on Wall collision
-					// Snake on Pellet collision
-					// Pellet on Wall collision (if pellets move)
-					// Pellet on Pellet collision (if pellets move)
+				//
+			
 
 				
+				//Snake on Wall
+				s1.isColliding |= Collision_SnakeWall(s1); // Snake on Wall collision
+				if( numPlayers==2 )
+					s2.isColliding |= Collision_SnakeWall(s2); // Snake on Wall collision
+
+				// Snake on Snake
+				s1.isColliding |= Collision_SnakeSnake(s1); 
+				if( numPlayers==2 )
+					s2.isColliding |= Collision_SnakeSnake(s2);
+
+				//TODO:
+				// Snake on Snake collision
+				// Snake on Pellet collision
+				// Pellet on Wall collision (if pellets move)
+				// Pellet on Pellet collision (if pellets move)
+
+				//============================
+				// Apply Collisions
+				//============================
+				//Mark new tile=Snake if able
+				MarkSnakeTiles(s1);
+				MarkSnakeTiles(s2);
 				
+				
+				
+				
+				
+				
+				
+				//TODO: unless Snake has special powerup, etc, collisions result in:
+				
+				
+				
+				
+				
+				
+				
+				//  - snake death
+				if( s1.isColliding || s2.isColliding )
+				{
+					//TODO: pause both snakes, highlight the err
+					//TODO: keep rendering until Snake's ErrPause runs out, then reset all
+					
+					//reset CurrentLevel
+					//reinitializeMap();
+					
+					//reset the collided snake's score
+					//retain the surviving snake's score
+					//reset all other attributes for both snakes (position, length, speed, etc)
+					//pause both snakes
+					s1.isPaused = true;
+					s2.isPaused = true;
+				}
+					
+				//  - reset of that snake's score to that from beginning of level 
+				//  - (other snake(s) retain score)
+				//  - reset of entire map for both snakes 
+				
+					
+					
 				//============================
 				//PRINT DEBUG INFO
 				//============================
@@ -208,11 +245,86 @@ public class Game extends Applet implements Runnable, KeyListener
 			}
 			catch(InterruptedException ie)
 			{
-			
+				
 			}
 		}
 	}
 	
+	
+	public boolean Collision_SnakeWall(Snake s)
+	{
+		boolean collision = false;
+		Map.tile tmpTile = CurrentLevel.getTileAt(s.head);
+		if( tmpTile.name()=="wall" )
+		{
+			collision=true;
+		}
+		return collision;
+	}
+
+	public boolean Collision_SnakeSnake(Snake s)
+	{
+		boolean collision = false;
+		Map.tile tmpTile = CurrentLevel.getTileAt(s.head);
+		if( (tmpTile.name()=="snake1" && s.name!=s1.name) ||
+			(tmpTile.name()=="snake2" && s.name!=s2.name) )
+		{
+			collision=true;
+		}
+		//TODO: bugfix: snake1 registers crash in head-on, but not snake2, due to snake2 more recently setting the tile name.
+		// make it so both snakes register the crash... somehow.
+
+		return collision;
+	}
+
+	
+	public void MarkSnakeTiles(Snake s)
+	{
+		Map.tile t = CurrentLevel.getTileAt(s.head);
+		
+		//define tileAt(s.head) as a Tile.Snake#
+		if( s.name==s1.name )
+			if( t.name()=="pellet" || t.name()=="blank" )
+				//if snake1
+				CurrentLevel.setTileAt(s.head, Map.tile.snake1);
+			else
+			{
+				//error, or duplicate call per snake-on-tile
+			}
+
+		//define tileAt(s.head) as a Tile.Snake#
+		if( s.name==s2.name )
+			if( t.name()=="pellet" || t.name()=="blank" )
+				//if snake2
+				CurrentLevel.setTileAt(s.head, Map.tile.snake2);
+			else
+			{
+				//error, or duplicate call per snake-on-tile
+			}
+
+		//mark tileAt(s.tail_prev) as Tile.Blank
+		if( s.tail_prev!=null )
+			CurrentLevel.setTileAt(s.tail_prev, Map.tile.blank);
+	
+		//update tail_prev before moving snake
+		s.tail_prev = s.tail;
+
+	}
+	
+	
+	public void processSnakeMovement(Snake s)
+	{
+		
+		//move snake
+		if( !s.isPaused ) s.moveSnake();
+		else
+			if( s.pauseTime--<=0 )
+			{
+				s.pauseTime = s.maxPause;
+				s.isPaused = false;
+			}
+	}
+
 
 	//override update() to handle double buffering, avoid flickering
 	public void update(Graphics g)
@@ -222,7 +334,7 @@ public class Game extends Applet implements Runnable, KeyListener
 		{
 			dbImage = createImage(WDTH, HGHT);
 			dbGraphics = dbImage.getGraphics();
-		}		
+		}
 
 		dbGraphics.setColor(backgroundColor);
 		dbGraphics.fillRect(0, 0,  WDTH, HGHT);
@@ -232,6 +344,7 @@ public class Game extends Applet implements Runnable, KeyListener
 		//finally, draw the items
 		g.drawImage(dbImage, 0, 0, this);
 	}
+	
 	
 	//Draw each object to the screen once. The repaint() method will call this method
 	public void paint(Graphics g)
@@ -254,7 +367,13 @@ public class Game extends Applet implements Runnable, KeyListener
 					g.fillRect((x*grid)-(grid/2), (y*grid)-(grid/2), grid, grid);
 				}	
 		}
-		
+
+		//draw pellet(s)
+		for( int i=0; i<pellets.size(); i++ )
+		{
+			g.setColor(pelletColor);
+			g.drawRect(50, 50, 60, 60);
+		}
 		
 		//draw every segment of the snake
 		drawSnake(g, s1);
@@ -315,7 +434,10 @@ public class Game extends Applet implements Runnable, KeyListener
 
 		
 		int grid = s.width;
-		g.setColor(s.color);
+		if( !s.isColliding ) 
+			g.setColor(s.color);
+		else
+			g.setColor(s.color_inv);
 		Coord pnt1 = s.head;
 		Coord pnt2;
 		for(int i=s.corners.size()-1; i>=0; i--)
