@@ -149,7 +149,8 @@ public class Map {
 	
 	public tile getTileAt(Coord c)
 	{
-		int x=c.x/grid, y=c.y/grid;
+		//TODO:  fix rounding???
+		int x=Math.round(c.x/grid), y=Math.round(c.y/grid);
 		
 		if( x<width-1 && y<height-1 )
 			return map[x][y];

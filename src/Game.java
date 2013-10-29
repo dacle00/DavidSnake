@@ -33,7 +33,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	int			numMaps = 1;
 	int			level;
 	Map			CurrentLevel;
-	int			MapGridSize = 20;
+	int			MapGridSize = 33;
 	Snake		s1;
 	Snake		s2;
 	ArrayList<Pellet>	pellets;
@@ -82,7 +82,7 @@ public class Game extends Applet implements Runnable, KeyListener
 		maps = new Map[numMaps];
 		Map m = new Map(WDTH, HGHT, MapGridSize);
 		//m.addWall_box(m.width/4, m.height/4, (m.width/4)*3, (m.height/4)*3);
-		m.p1x = (3*MapGridSize);
+		m.p1x = (2*MapGridSize);
 		m.p1y = HGHT-(8*MapGridSize);
 		m.p2x = WDTH-(3*MapGridSize);
 		m.p2y = HGHT-(8*MapGridSize);
@@ -174,18 +174,9 @@ public class Game extends Applet implements Runnable, KeyListener
 				MarkSnakeTiles(s1);
 				MarkSnakeTiles(s2);
 				
-				
-				
-				
-				
-				
+
 				
 				//TODO: unless Snake has special powerup, etc, collisions result in:
-				
-				
-				
-				
-				
 				
 				
 				//  - snake death
@@ -271,7 +262,7 @@ public class Game extends Applet implements Runnable, KeyListener
 		{
 			collision=true;
 		}
-		//TODO: bugfix: snake1 registers crash in head-on, but not snake2, due to snake2 more recently setting the tile name.
+		//TODO: bug fix: snake1 registers crash in head-on, but not snake2, due to snake2 more recently setting the tile name.
 		// make it so both snakes register the crash... somehow.
 
 		return collision;
@@ -359,13 +350,14 @@ public class Game extends Applet implements Runnable, KeyListener
 		int h = CurrentLevel.height;
 		for( int x=0; x<w; x++)
 		{
-			g.drawLine(0, x*grid, WDTH, x*grid);
-			g.drawLine(x*grid, 0, x*grid, HGHT);
+			if( showDebug )
+			{
+				g.drawLine(0, x*grid, WDTH, x*grid);
+				g.drawLine(x*grid, 0, x*grid, HGHT);
+			}
 			for( int y=0; y<h; y++)
 				if( CurrentLevel.map[x][y]==Map.tile.wall )
-				{
-					g.fillRect((x*grid)-(grid/2), (y*grid)-(grid/2), grid, grid);
-				}	
+					g.fillRect((x*grid), (y*grid), grid, grid);
 		}
 
 		//draw pellet(s)
@@ -375,12 +367,9 @@ public class Game extends Applet implements Runnable, KeyListener
 			g.drawRect(50, 50, 60, 60);
 		}
 		
-		//draw every segment of the snake
+		//draw each snake
 		drawSnake(g, s1);
 		if( numPlayers==2 ) drawSnake(g, s2);
-		
-		//draw temporary grid, showing where snake can turn.
-		g.setColor(wallColor);
 		
 		//DRAW PAUSE MENU
 		if( gamePaused )
@@ -416,23 +405,7 @@ public class Game extends Applet implements Runnable, KeyListener
 	
 	private void drawSnake(Graphics g, Snake s)
 	{
-		
-		//draw Snake1 head
-		//g.setColor(s1.color);
-		//g.fillRoundRect(s1.head.x-(s1.width/2), s1.head.y-(s1.width/2), s1.width, s1.width, s1.width/2, s1.width/2);
-
-		//draw Snake1 tail
-		//g.setColor(Color.white);
-		//g.fillRoundRect(s1.tail.x-(s1.width/4), s1.tail.y-(s1.width/4), s1.width/2, s1.width/2, s1.width/2, s1.width/2);
-
-		//draw every corner in Snake1
-		//g.setColor(Color.black);
-		//for(int i = 0; i<s1.corners.size(); i++)
-		//{
-		//	Coord c = s1.corners.get(i);
-		//	g.fillRect(c.x-(s1.width/4), c.y-(s1.width/4), s1.width/2, s1.width/2);
-
-		
+				
 		int grid = s.width;
 		if( !s.isColliding ) 
 			g.setColor(s.color);
@@ -448,24 +421,54 @@ public class Game extends Applet implements Runnable, KeyListener
 		}
 		//draw line from last pnt to tail
 		drawSegment(g, pnt1, s.tail, grid);
+
+		//draw Snake head
+		if( !s.isColliding ) 
+			g.setColor(s.color);
+		else
+			g.setColor(s.color_inv);
+		//int buffer = (int)(.1*grid);
+		//g.fillRoundRect(s.head.x+buffer, s.head.y+buffer, grid-(2*buffer), grid-(2*buffer), 5*grid/4, 5*grid/4);	//slightly fatter than snake
+		g.fillRoundRect(s.head.x, s.head.y, grid, grid, grid/2, grid/2);											//full grid width
+		
+		if( showDebug )
+		{		
+			//draw Snake1 tail
+			int grdFraction = 4;
+			g.setColor(Color.white);
+			//g.fillRoundRect(s.tail.x+(grid-grdFraction/2)-grid/2, s1.tail.y+(grid-grdFraction/2)-grid/2, grid/grdFraction, grid/grdFraction, s.width/2, s.width/2);
+			g.fillRect(s.tail.x+(grid-grdFraction/2)-grid/2, s.tail.y+(grid-grdFraction/2)-grid/2, grid/grdFraction, grid/grdFraction);
+		
+			//draw every corner in Snake
+			grdFraction = 4;
+			g.setColor(Color.black);
+			for(int i = 0; i<s.corners.size(); i++)
+			{
+				Coord c = s.corners.get(i);
+				g.fillRect(c.x+(grid-grdFraction/2)-grid/2, c.y+(grid-grdFraction/2)-grid/2, grid/grdFraction, grid/grdFraction);
+			}
+		}
+		
 	}
 	
 	
 	private void drawSegment(Graphics g, Coord c1, Coord c2, int grd)
 	{
 
-		int buffer = (int)(0.2*grd);
+		int buffer = (int) Math.round(0.2*grd);
 		int width = Math.abs(c1.getHorizontalDistanceTo(c2));
 		int height = Math.abs(c1.getVerticalDistanceTo(c2));
-		
+		//TODO:  figure out the anomaly
+		// the +1's and -1's below offset the snake by 1 pixel. this aligns it to the grid and makes the head appear symmetrical
+		// however, it also causes a couple pixels to extend outward from top and left corners.
 		if( c1.isDirectlyAbove(c2) )
-			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, grd-(2*buffer), height+(grd-(2*buffer)), grd/2, grd/2);
+			g.fillRoundRect(c1.x+buffer+1, c1.y+buffer, grd-(2*buffer)-1, height+(grd-(2*buffer)), grd/2, grd/2);
 		if( c1.isDirectlyBelow(c2) )
-			g.fillRoundRect(c1.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, grd-(2*buffer), height+(grd-(2*buffer)), grd/2, grd/2);
+			g.fillRoundRect(c1.x+buffer+1, c2.y+buffer, grd-(2*buffer)-1, height+(grd-(2*buffer)), grd/2, grd/2);
 		if( c1.isDirectlyLeftOf(c2) )
-			g.fillRoundRect(c1.x-(grd/2)+buffer, c1.y-(grd/2)+buffer, width+(grd-(2*buffer)), grd-(2*buffer), grd/2, grd/2);
+			g.fillRoundRect(c1.x+buffer, c1.y+buffer+1, width+(grd-(2*buffer)), grd-(2*buffer)-1, grd/2, grd/2);
 		if( c1.isDirectlyRightOf(c2) )
-			g.fillRoundRect(c2.x-(grd/2)+buffer, c2.y-(grd/2)+buffer, width+(grd-(2*buffer)), grd-(2*buffer), grd/2, grd/2);
+			g.fillRoundRect(c2.x+buffer, c2.y+buffer+1, width+(grd-(2*buffer)), grd-(2*buffer)-1, grd/2, grd/2);
 	}
 	
 	
