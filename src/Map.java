@@ -66,6 +66,25 @@ public class Map {
 			map[width-1][x] = tile.wall;
 		}
 	}
+
+	
+	public Map(Map m)
+	{
+		//set everything to 1
+		width = m.width;
+		height = m.height;
+		grid = m.grid;
+		p1x = m.p1x;
+		p1y = m.p1y;
+		p2x = m.p2x;
+		p2y = m.p2y;
+		p1StartLocation = m.p1StartLocation;
+		p2StartLocation = m.p2StartLocation;
+		map = m.map;
+	}
+
+	
+	
 	
 	/*      
 	 * 		XXXXX
@@ -149,8 +168,7 @@ public class Map {
 	
 	public tile getTileAt(Coord c)
 	{
-		//TODO:  fix rounding???
-		int x=Math.round(c.x/grid), y=Math.round(c.y/grid);
+		int x=c.x, y=c.y;
 		
 		if( x<width-1 && y<height-1 )
 			return map[x][y];
@@ -159,9 +177,9 @@ public class Map {
 	}
 	public void setTileAt(Coord c, tile t)
 	{
-		map[c.x/grid][c.y/grid]=t;
+		map[c.x][c.y]=t;
 	}
-
+	
 	
 	public Coord getRandomEmptyCoord()
 	{
@@ -173,11 +191,24 @@ public class Map {
 		Random rnd = new Random(seed);
 		c.x = rnd.nextInt(width-1);
 		c.y = rnd.nextInt(height-1);
-		while( getTileAt(c)!=tile.wall && getTileAt(c)!=tile.pellet )
+		while( getTileAt(c)!=tile.blank )
 		{
-			c.x = rnd.nextInt();
-			c.y = rnd.nextInt();
+			c.x = rnd.nextInt(width-1);
+			c.y = rnd.nextInt(height-1);
 		}
 		return c;
+	}
+
+
+	//set all non-wall tiles to tile.blank
+	public void clear()
+	{
+		for( int x=0; x<width; x++ )
+			for( int y=0; y<height; y++ )
+			{
+				tile t = map[x][y];
+				if( t!=tile.wall && t!=tile.p1Start && t!=tile.p2Start )
+					map[x][y]=tile.blank;
+			}
 	}
 }

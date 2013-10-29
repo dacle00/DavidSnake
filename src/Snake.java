@@ -24,7 +24,8 @@ public class Snake
 	public int maxPause = 120;
 	public int pauseTime;
 	public int score;
-	
+	public boolean tailPaused;
+	public int tailPauseDuration;
 	
 	public Snake()
 	{
@@ -40,17 +41,19 @@ public class Snake
 		corners.clear();
 		// corners	= new int[lengthMAX/width][lengthMAX/width];  //represents the maximum possible turns a snake could make within its allowed length
 		facing	= direction.up;
-		head = new Coord();
+		head = new Coord(400,400);
 		tail = placeTail();
 		tail_prev = null;
-		isPaused = false; //todo TRUE
+		isPaused = false; //TODO: TRUE to start.
 		pauseTime = 120;
 		score = 0;
 		distUntilTurn = -1;
+		tailPaused = false;
+		tailPauseDuration = 0;
 	}
 	
 	//new snake, has length, but will only occupy 1 spot to start.
-	public Snake(String pName, Color c, int pLength, int pLengthMax, int pWidth, int headXLoc, int headYLoc, direction dir, float spd, int spdMax)
+	public Snake(String pName, Color c, int score, int pLength, int pLengthMax, int pWidth, int headXLoc, int headYLoc, direction dir, float spd, int spdMax)
 	{
 		name = pName;
 		color = c;
@@ -68,7 +71,9 @@ public class Snake
 		tail = placeTail();
 		tail_prev = null;
 		score = 0;
-		distUntilTurn = -1;		
+		distUntilTurn = -1;
+		tailPaused = false;
+		tailPauseDuration = 0;
 	}
 	
 	
@@ -88,6 +93,18 @@ public class Snake
 	    
 	    return new Color(red, green, blue, alpha);
 	}
+	
+	
+	public void score(int incVal)
+	{
+		score+=incVal;
+		//speed+=.5f;  //TODO:  debug speeds other than "1"
+		tailPaused=true;
+		tailPauseDuration=width;
+		length++;
+	}
+	
+	
 	
 	
 	public Coord placeTail()
@@ -183,15 +200,26 @@ public class Snake
 		//determine if tail should move
 		if( !tail.equals(head) && !corners.contains(tail) )
 		{
-			//move tail "forward"
-			if( tailDir==direction.left )
-				tail.x = (int)(x-distance);
-			else if( tailDir==direction.right )
-				tail.x = (int)(x+distance);
-			else if( tailDir==direction.up )
-				tail.y = (int)(y-distance);
-			else if( tailDir==direction.down )
-				tail.y = (int)(y+distance);
+			if( !tailPaused )
+			{
+				//move tail "forward"
+				if( tailDir==direction.left )
+					tail.x = (int)(x-distance);
+				else if( tailDir==direction.right )
+					tail.x = (int)(x+distance);
+				else if( tailDir==direction.up )
+					tail.y = (int)(y-distance);
+				else if( tailDir==direction.down )
+					tail.y = (int)(y+distance);				
+			}
+			else
+			{
+				//increment tail pause
+				tailPauseDuration-=distance;
+				
+				//if no tailPausedDuration remains, toggle tailPaused
+				if( tailPauseDuration<1 ) tailPaused=false;
+			}
 		}
 		else
 		{
